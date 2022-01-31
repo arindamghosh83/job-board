@@ -16,16 +16,21 @@ const typeDefs = gql(fs.readFileSync('./schema.graphql',{encoding: 'utf-8'}));
 const resolvers = require('./resolvers');
 
 async function startApolloServer(typeDefs, resolvers) {
-
-  const apolloServer = new ApolloServer({typeDefs, resolvers})
-  
   const app = express();
-  await apolloServer.start();
-  apolloServer.applyMiddleware({app, path: '/graphql'})
   app.use(cors(), bodyParser.json(), expressJwt({
     secret: jwtSecret,
     credentialsRequired: false
   }));
+
+  const context = ({req}) => ({
+    user: req.user && db.users.get(req.user.sub)
+  })
+  const apolloServer = new ApolloServer({typeDefs, resolvers,context})
+  
+
+  await apolloServer.start();
+  apolloServer.applyMiddleware({app, path: '/graphql'})
+
 
   app.post('/login', (req, res) => {
     const {email, password} = req.body;
